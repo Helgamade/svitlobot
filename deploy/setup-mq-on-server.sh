@@ -5,7 +5,7 @@ set -e
 DIR="${1:-/home/idesig02/helgamade.com/svitlobot}"
 cd "$DIR" || exit 1
 
-for py in python3.9 python3.8 python3; do
+for py in python3.11 python3.10 python3.9 python3.8 python3; do
   if command -v "$py" >/dev/null 2>&1; then
     VER=$("$py" -c "import sys; print(sys.version_info.major, sys.version_info.minor)" 2>/dev/null) || continue
     MAJOR=$(echo "$VER" | cut -d' ' -f1)
@@ -18,12 +18,19 @@ for py in python3.9 python3.8 python3; do
 done
 
 if [ -z "$PYTHON_CMD" ]; then
-  echo "Need Python 3.8+ (python3.9 or python3.8). Install it and run this script again."
+  echo "Need Python 3.8+ (python3.10, python3.9, ...). Install it and run this script again."
   exit 1
 fi
 
 echo "Using: $PYTHON_CMD"
-"$PYTHON_CMD" -m venv venv_mq
+# Try normal venv first; on some hostings ensurepip is missing, then use --without-pip + get-pip
+if ! "$PYTHON_CMD" -m venv venv_mq 2>/dev/null; then
+  echo "venv with pip failed, trying --without-pip + get-pip..."
+  "$PYTHON_CMD" -m venv venv_mq --without-pip
+  curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+  ./venv_mq/bin/python /tmp/get-pip.py -q
+  rm -f /tmp/get-pip.py
+fi
 ./venv_mq/bin/pip install -q -r requirements.txt -r requirements-mq.txt
 echo "venv_mq ready. Enable MQ consumer (run as root):"
 echo "  sudo cp $DIR/deploy/svitlobot-mq.service /etc/systemd/system/"
