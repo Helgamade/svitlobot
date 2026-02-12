@@ -76,3 +76,8 @@ def mq_env() -> str:
     """Tuya MQ topic suffix: 'event' (prod) or 'event-test' (test)."""
     v = os.environ.get("MQ_MODE", "prod").strip().lower()
     return "event-test" if v == "test" else "event"
+
+
+def web_send_secret() -> str:
+    """Secret for web form POST (manual send to Telegram). Required for web_send to accept sends."""
+    return os.environ.get("WEB_SEND_SECRET", "").strip()
