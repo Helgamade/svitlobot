@@ -23,8 +23,10 @@ do
             git reset --hard origin/master 2>&1 || git reset --hard FETCH_HEAD 2>&1
         fi
 
-        echo "Restarting svitlobot service (if exists)..."
-        sudo systemctl restart svitlobot 2>/dev/null || true
+        echo "Restarting svitlobot..."
+        /usr/bin/pkill -f "python main.py" 2>/dev/null || true
+        sleep 1
+        "$TARGET/deploy/start-svitlobot-if-needed.sh" 2>/dev/null || true
 
         echo "===== Deployment complete! ====="
     else
