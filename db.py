@@ -1,6 +1,7 @@
 """
 MySQL storage for device online/offline events. Used for duration and analytics.
 Table: status_events (device_id, changed_at, is_online). Only state changes are stored.
+Times are stored in Europe/Kyiv (local time Ukraine).
 """
 from __future__ import absolute_import
 from datetime import datetime
@@ -11,20 +12,51 @@ try:
 except ImportError:
     pymysql = None  # type: ignore
 
+try:
+    import pytz
+    _UTC = pytz.UTC
+    try:
+        _TZ_KYIV = pytz.timezone("Europe/Kyiv")
+    except pytz.UnknownTimeZoneError:
+        _TZ_KYIV = pytz.timezone("Europe/Kiev")
+except Exception:
+    _TZ_KYIV = None  # type: ignore
+
 _TABLE = "status_events"
+
+
+def _utc_to_kyiv(dt):
+    """Convert naive UTC datetime to naive local datetime Europe/Kyiv for DB storage."""
+    if _TZ_KYIV is None or dt is None:
+        return dt
+    if dt.tzinfo is None:
+        dt = _UTC.localize(dt)
+    return dt.astimezone(_TZ_KYIV).replace(tzinfo=None)
+
+
+def _kyiv_to_utc(dt):
+    """Interpret naive datetime as Europe/Kyiv and return naive UTC (for get_last)."""
+    if _TZ_KYIV is None or dt is None:
+        return dt
+    return _TZ_KYIV.localize(dt).astimezone(_UTC).replace(tzinfo=None)
 
 
 def _conn():
     import config
-    return pymysql.connect(
-        host=config.mysql_host(),
-        user=config.mysql_user(),
-        password=config.mysql_password(),
-        database=config.mysql_database(),
-        port=config.mysql_port(),
-        charset="utf8mb4",
-        cursorclass=pymysql.cursors.DictCursor,
-    )
+    kwargs = {
+        "user": config.mysql_user(),
+        "password": config.mysql_password(),
+        "database": config.mysql_database(),
+        "charset": "utf8mb4",
+        "cursorclass": pymysql.cursors.DictCursor,
+    }
+    sock = config.mysql_unix_socket()
+    if sock:
+        kwargs["unix_socket"] = sock
+    else:
+        kwargs["host"] = config.mysql_host()
+        kwargs["port"] = config.mysql_port()
+    return pymysql.connect(**kwargs)
 
 
 def ensure_table(cursor) -> None:
@@ -55,7 +87,10 @@ def get_last(device_id: str) -> Optional[Tuple[datetime, bool]]:
                 row = cur.fetchone()
                 if not row:
                     return None
-                return (row["changed_at"], bool(row["is_online"]))
+                changed_at = row["changed_at"]
+                if _TZ_KYIV and changed_at:
+                    changed_at = _kyiv_to_utc(changed_at)
+                return (changed_at, bool(row["is_online"]))
         finally:
             conn.close()
     except Exception:
@@ -71,6 +106,7 @@ def record_if_changed(device_id: str, is_online: bool, now: Optional[datetime] =
     if not pymysql or not mysql_available():
         return (False, None, None)
     now = now or datetime.utcnow()
+    now_local = _utc_to_kyiv(now)  # store and compare in Kyiv time
     try:
         conn = _conn()
         try:
@@ -87,10 +123,10 @@ def record_if_changed(device_id: str, is_online: bool, now: Optional[datetime] =
                 duration_sec = None
                 if row and row["changed_at"]:
                     last = row["changed_at"]
-                    duration_sec = (now - last).total_seconds()
+                    duration_sec = (now_local - last).total_seconds()
                 cur.execute(
                     "INSERT INTO status_events (device_id, changed_at, is_online) VALUES (%s, %s, %s)",
-                    (device_id, now, 1 if is_online else 0),
+                    (device_id, now_local, 1 if is_online else 0),
                 )
                 conn.commit()
                 return (True, duration_sec, prev_online)
