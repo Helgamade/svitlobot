@@ -56,6 +56,9 @@ do
         else
             "$TARGET/deploy/start-realtime-if-needed.sh" 2>/dev/null || true
         fi
+        echo "Restarting web_send (gunicorn)..."
+        /usr/bin/pkill -f "gunicorn.*web_send" 2>/dev/null || true
+        sleep 1
         "$TARGET/deploy/start-web-send-if-needed.sh" 2>/dev/null || true
 
         echo "===== Deploy complete: server = repo ====="
