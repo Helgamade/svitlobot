@@ -35,7 +35,7 @@ do
             git checkout -B master origin/master 2>/dev/null || true
             git reset --hard origin/master 2>&1
             # Удалить неотслеживаемые файлы (старые/лишние). Не трогать: .env, venv, логи
-            git clean -fd -e .env -e .env.save -e venv -e .venv -e "*.log" -e __pycache__ 2>/dev/null || true
+            git clean -fd -e .env -e .env.save -e venv -e venv_mq -e .venv -e "*.log" -e __pycache__ 2>/dev/null || true
         fi
 
         # Вернуть .env
@@ -51,6 +51,9 @@ do
         /usr/bin/pkill -f "python main.py" 2>/dev/null || true
         sleep 1
         "$TARGET/deploy/start-svitlobot-if-needed.sh" 2>/dev/null || true
+        if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet svitlobot-mq 2>/dev/null; then
+            systemctl restart svitlobot-mq 2>/dev/null && echo "Restarted svitlobot-mq" || true
+        fi
 
         echo "===== Deploy complete: server = repo ====="
     else

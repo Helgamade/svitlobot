@@ -1,0 +1,19 @@
+# Realtime status via Tuya Message Queue (Pulsar).
+# Requires: Python 3.8+ venv with pip install -r requirements.txt -r requirements-mq.txt
+# Copy to systemd: sudo cp deploy/svitlobot-mq.service /etc/systemd/system/
+# Enable: sudo systemctl enable --now svitlobot-mq
+[Unit]
+Description=Tuya MQ realtime status -> Telegram
+After=network.target
+
+[Service]
+Type=simple
+User=idesig02
+WorkingDirectory=/home/idesig02/helgamade.com/svitlobot
+Environment=PATH=/home/idesig02/helgamade.com/svitlobot/venv_mq/bin
+ExecStart=/home/idesig02/helgamade.com/svitlobot/venv_mq/bin/python realtime_consumer.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -70,3 +70,9 @@ def mysql_database() -> str:
 def mysql_unix_socket() -> str:
     """Optional: path to MySQL socket (if set, host/port are ignored)."""
     return os.environ.get("MYSQL_UNIX_SOCKET", "").strip()
+
+
+def mq_env() -> str:
+    """Tuya MQ topic suffix: 'event' (prod) or 'event-test' (test)."""
+    v = os.environ.get("MQ_MODE", "prod").strip().lower()
+    return "event-test" if v == "test" else "event"

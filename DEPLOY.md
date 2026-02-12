@@ -121,6 +121,25 @@ production  idesig02@idesig02.ftp.tools:deploy-svitlobot.git (fetch)
 production  idesig02@idesig02.ftp.tools:deploy-svitlobot.git (push)
 ```
 
+## Realtime MQ (моментальные уведомления, один раз на сервере)
+
+Чтобы получать уведомления за 5–10 сек через Tuya Message Queue (Pulsar), на сервере нужен Python 3.8+ и отдельный venv. После деплоя по SSH:
+
+```bash
+cd /home/idesig02/helgamade.com/svitlobot
+sh deploy/setup-mq-on-server.sh
+```
+
+Скрипт создаст `venv_mq` и установит зависимости. Дальше включи systemd-юнит (команды выведет скрипт, или вручную):
+
+```bash
+sudo cp /home/idesig02/helgamade.com/svitlobot/deploy/svitlobot-mq.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now svitlobot-mq
+```
+
+Проверка: `systemctl status svitlobot-mq`. Логи: `journalctl -u svitlobot-mq -f`. Message Service должен быть включён в Tuya IoT (EU), правила deviceOnline/deviceOffline — в Production.
+
 ## Если hook не срабатывает
 
 Исправь перевод строк (LF) и права:
