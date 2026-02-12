@@ -1,6 +1,4 @@
-#!/bin/bash
-# Запускает svitlobot, если он ещё не запущен. Для крона (Хостинг Украина).
-# В задаче cron укажите путь к этому файлу. Полные пути — cron не использует PATH.
+#!/bin/sh
 DIR="/home/idesig02/helgamade.com/svitlobot"
 PYTHON="$DIR/venv/bin/python"
 LOG="$DIR/svitlobot.log"
