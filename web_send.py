@@ -17,30 +17,135 @@ HTML_FORM = """<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Світлобот — надіслати в канал</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { font-size: 1.25rem; }
-    label { display: block; margin-top: 0.75rem; }
-    input[type="password"], textarea { width: 100%; box-sizing: border-box; padding: 0.5rem; }
-    textarea { min-height: 100px; resize: vertical; }
-    button { margin-top: 1rem; padding: 0.5rem 1rem; }
-    .msg { margin-top: 1rem; padding: 0.5rem; border-radius: 4px; }
-    .ok { background: #d4edda; }
-    .err { background: #f8d7da; }
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #2d2d2d;
+      --text: #e8e8e8;
+      --text-muted: #9a9a9a;
+      --accent: #4a9eff;
+      --accent-hover: #6bb1ff;
+      --ok-bg: rgba(52, 168, 83, 0.2);
+      --ok-border: #34a853;
+      --err-bg: rgba(234, 67, 53, 0.2);
+      --err-border: #ea4335;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --tap: 48px;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 420px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 1.25rem 0;
+      letter-spacing: -0.02em;
+    }
+    label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      margin-top: 1rem;
+    }
+    label:first-of-type { margin-top: 0; }
+    input[type="password"],
+    textarea {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      font-size: 1rem;
+      line-height: 1.45;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: var(--tap);
+      transition: border-color 0.15s;
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    ::placeholder { color: var(--text-muted); opacity: 0.8; }
+    button {
+      width: 100%;
+      margin-top: 1.25rem;
+      padding: 0.9rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      min-height: var(--tap);
+      cursor: pointer;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:active { opacity: 0.95; }
+    .msg {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      line-height: 1.4;
+      border: 1px solid;
+    }
+    .msg.ok { background: var(--ok-bg); border-color: var(--ok-border); color: #81c995; }
+    .msg.err { background: var(--err-bg); border-color: var(--err-border); color: #f28b82; }
   </style>
 </head>
 <body>
-  <h1>Надіслати повідомлення в канал</h1>
-  <form method="post" action="/">
-    <label for="text">Текст:</label>
-    <textarea id="text" name="text" required placeholder="Введіть повідомлення..."></textarea>
-    <label for="secret">Секрет (пароль):</label>
-    <input type="password" id="secret" name="secret" required placeholder="WEB_SEND_SECRET з .env">
-    <button type="submit">Надіслати в Telegram</button>
-  </form>
-  <!--EXTRA-->
+  <div class="wrap">
+    <div class="card">
+      <h1>Надіслати в канал</h1>
+      <form method="post" action="/">
+        <label for="text">Повідомлення</label>
+        <textarea id="text" name="text" required placeholder="Введіть текст..." autocomplete="off"></textarea>
+        <label for="secret">Секрет</label>
+        <input type="password" id="secret" name="secret" required placeholder="Пароль для відправки" autocomplete="current-password">
+        <button type="submit">Надіслати в Telegram</button>
+      </form>
+      <!--EXTRA-->
+    </div>
+  </div>
 </body>
 </html>
 """
