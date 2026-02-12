@@ -40,10 +40,14 @@ HTML_FORM = """<!DOCTYPE html>
     <input type="password" id="secret" name="secret" required placeholder="WEB_SEND_SECRET з .env">
     <button type="submit">Надіслати в Telegram</button>
   </form>
-  {0}
+  <!--EXTRA-->
 </body>
 </html>
 """
+
+
+def _html_with_extra(extra):
+    return HTML_FORM.replace("<!--EXTRA-->", extra)
 
 
 def _get_secret():
@@ -59,27 +63,27 @@ def index():
         extra = ""
         if not _get_secret():
             extra = '<p class="msg err">WEB_SEND_SECRET не задано в .env — відправка вимкнена.</p>'
-        return Response(HTML_FORM.format(extra), mimetype="text/html; charset=utf-8")
+        return Response(_html_with_extra(extra), mimetype="text/html; charset=utf-8")
 
     # POST
     secret = _get_secret()
     if not secret:
-        return Response(HTML_FORM.format('<p class="msg err">Відправка вимкнена (немає WEB_SEND_SECRET).</p>'), 503, mimetype="text/html; charset=utf-8")
+        return Response(_html_with_extra('<p class="msg err">Відправка вимкнена (немає WEB_SEND_SECRET).</p>'), 503, mimetype="text/html; charset=utf-8")
 
     form_secret = (request.form.get("secret") or "").strip()
     if form_secret != secret:
-        return Response(HTML_FORM.format('<p class="msg err">Невірний секрет.</p>'), 403, mimetype="text/html; charset=utf-8")
+        return Response(_html_with_extra('<p class="msg err">Невірний секрет.</p>'), 403, mimetype="text/html; charset=utf-8")
 
     text = (request.form.get("text") or "").strip()
     if not text:
-        return Response(HTML_FORM.format('<p class="msg err">Текст порожній.</p>'), 400, mimetype="text/html; charset=utf-8")
+        return Response(_html_with_extra('<p class="msg err">Текст порожній.</p>'), 400, mimetype="text/html; charset=utf-8")
 
     try:
         send_to_channel(config.telegram_bot_token(), config.telegram_channel_id(), text)
-        return Response(HTML_FORM.format('<p class="msg ok">Надіслано в канал.</p>'), mimetype="text/html; charset=utf-8")
+        return Response(_html_with_extra('<p class="msg ok">Надіслано в канал.</p>'), mimetype="text/html; charset=utf-8")
     except Exception as e:
         err_escaped = str(e).replace("<", "&lt;")
-        return Response(HTML_FORM.format('<p class="msg err">Помилка: {}</p>'.format(err_escaped)), 502, mimetype="text/html; charset=utf-8")
+        return Response(_html_with_extra('<p class="msg err">Помилка: {}</p>'.format(err_escaped)), 502, mimetype="text/html; charset=utf-8")
 
 
 if __name__ == "__main__":
