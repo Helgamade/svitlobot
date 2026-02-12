@@ -73,11 +73,19 @@ def handle_decrypted(decrypted_json: str, our_device_id: str) -> None:
     if dev_id != our_device_id:
         return
     ts_ms = biz_data.get("time") or data.get("ts")
-    now_utc = _now_from_ts(ts_ms)
+    event_utc = _now_from_ts(ts_ms)
+    # Ignore out-of-order or duplicate: Pulsar can deliver from different partitions
+    # out of order; Tuya may send duplicate offline. Only process if event is newer than last record.
+    last = db.get_last(our_device_id)
+    if last is not None:
+        last_changed_at, _ = last
+        if event_utc <= last_changed_at:
+            log.debug("Ignoring stale/duplicate event at %s (last %s)", event_utc, last_changed_at)
+            return
     if biz_code == "deviceOffline":
-        _handle_status_change(our_device_id, False, now_utc)
+        _handle_status_change(our_device_id, False, event_utc)
     elif biz_code == "deviceOnline":
-        _handle_status_change(our_device_id, True, now_utc)
+        _handle_status_change(our_device_id, True, event_utc)
     # devicePropertyMessage (protocol 1000) can be added later if needed for relay/switch reports
 
 
