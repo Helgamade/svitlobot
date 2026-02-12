@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import json
 import logging
 import sys
+import time
 from datetime import datetime
 
 import pulsar
@@ -29,6 +30,7 @@ log = logging.getLogger(__name__)
 PULSAR_EU = "pulsar+ssl://mqe.tuyaeu.com:7285/"
 MQ_ENV_PROD = "event"
 MQ_ENV_TEST = "event-test"
+RECONNECT_DELAY_SEC = 30
 
 
 def _now_from_ts(ts_ms):
@@ -52,8 +54,11 @@ def _handle_status_change(device_id: str, is_online: bool, now_utc: datetime) ->
         duration_sec=duration_sec,
         prev_was_online=prev_online,
     )
-    send_to_channel(config.telegram_bot_token(), config.telegram_channel_id(), text)
-    log.info("MQ status -> Telegram: %s", "online" if is_online else "offline")
+    try:
+        send_to_channel(config.telegram_bot_token(), config.telegram_channel_id(), text)
+        log.info("MQ status -> Telegram: %s", "online" if is_online else "offline")
+    except Exception as e:
+        log.exception("Telegram send failed: %s", e)
 
 
 def handle_decrypted(decrypted_json: str, our_device_id: str) -> None:
@@ -76,6 +81,22 @@ def handle_decrypted(decrypted_json: str, our_device_id: str) -> None:
     # devicePropertyMessage (protocol 1000) can be added later if needed for relay/switch reports
 
 
+def run_consumer_loop(client, consumer, access_key: str, device_id: str) -> None:
+    """Process messages until connection error or interrupt."""
+    while True:
+        msg = consumer.receive()
+        msg_id_str = message_id(msg.message_id())
+        try:
+            decrypted = decrypt_message(msg, access_key)
+            handle_decrypted(decrypted, device_id)
+        except Exception as e:
+            log.exception("Handle message %s: %s", msg_id_str, e)
+        try:
+            consumer.acknowledge_cumulative(msg)
+        except Exception as e:
+            log.exception("Ack failed: %s", e)
+
+
 def main() -> None:
     access_id = config.tuya_access_id()
     access_key = config.tuya_access_secret()
@@ -83,36 +104,43 @@ def main() -> None:
     mq_env = config.mq_env()
     topic = access_id + "/out/" + mq_env
     subscription = access_id + "-sub"
-    log.info("Connecting to Pulsar EU, topic=%s sub=%s device=%s", topic, subscription, device_id)
-
-    client = pulsar.Client(
-        PULSAR_EU,
-        authentication=get_authentication(access_id, access_key),
-        tls_allow_insecure_connection=True,
-    )
-    consumer = client.subscribe(
-        topic,
-        subscription,
-        consumer_type=pulsar.ConsumerType.Failover,
-    )
 
     while True:
+        client = None
         try:
-            msg = consumer.receive()
-            msg_id_str = message_id(msg.message_id())
-            try:
-                decrypted = decrypt_message(msg, access_key)
-                handle_decrypted(decrypted, device_id)
-            except Exception as e:
-                log.exception("Handle message %s: %s", msg_id_str, e)
-            consumer.acknowledge_cumulative(msg)
+            log.info("Connecting to Pulsar EU, topic=%s sub=%s device=%s", topic, subscription, device_id)
+            client = pulsar.Client(
+                PULSAR_EU,
+                authentication=get_authentication(access_id, access_key),
+                tls_allow_insecure_connection=True,
+            )
+            consumer = client.subscribe(
+                topic,
+                subscription,
+                consumer_type=pulsar.ConsumerType.Failover,
+            )
+            run_consumer_loop(client, consumer, access_key, device_id)
         except pulsar.Interrupted:
             log.info("Interrupted")
             break
         except KeyboardInterrupt:
             log.info("Stopped by user")
             break
-    client.close()
+        except Exception as e:
+            log.exception("Pulsar connection/loop failed, reconnecting in %ss: %s", RECONNECT_DELAY_SEC, e)
+            if client:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+            time.sleep(RECONNECT_DELAY_SEC)
+        else:
+            break
+    if client:
+        try:
+            client.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

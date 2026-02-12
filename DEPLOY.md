@@ -147,10 +147,10 @@ cd /home/idesig02/helgamade.com/svitlobot
 sh deploy/start-realtime-if-needed.sh
 ```
 
-Чтобы консьюмер поднимался после перезагрузки, добавь в cron (crontab -e), например раз в 5 минут:
+Чтобы консьюмер поднимался после перезагрузки, добавь в cron (crontab -e), например раз в 2 минуты:
 
 ```
-*/5 * * * * /home/idesig02/helgamade.com/svitlobot/deploy/start-realtime-if-needed.sh
+*/2 * * * * /home/idesig02/helgamade.com/svitlobot/deploy/start-realtime-if-needed.sh
 ```
 
 Логи: `tail -f /home/idesig02/helgamade.com/svitlobot/svitlobot-mq.log`.
