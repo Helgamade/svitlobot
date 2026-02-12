@@ -1,8 +1,10 @@
 """
 Poll Tuya device status, send to Telegram channel. Placeholder for Arduino later.
 """
+from __future__ import absolute_import
 import logging
 import time
+from typing import List
 
 import config
 from tuya_client import get_token, get_device_status
@@ -16,7 +18,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-def format_status(device_id: str, status_list: list[dict]) -> str:
+def format_status(device_id: str, status_list: List[dict]) -> str:
     """Build human-readable status message."""
     lines = [f"Device: {device_id}", "Status:"]
     for s in status_list:
@@ -26,7 +28,7 @@ def format_status(device_id: str, status_list: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def send_to_arduino(status_text: str, status_list: list[dict]) -> None:
+def send_to_arduino(status_text: str, status_list: List[dict]) -> None:
     """Placeholder: send status to Arduino UNO WiFi (HTTP or Serial)."""
     # TODO: implement when Arduino is ready
     # e.g. requests.post(f"http://{ARDUINO_IP}/status", json=status_list)

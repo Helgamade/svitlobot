@@ -2,10 +2,12 @@
 Tuya Cloud API client (EU). Get token then device status.
 Signature: https://developer.tuya.com/en/docs/iot/new-singnature?id=Kbw0q34cs2e5g
 """
+from __future__ import absolute_import
 import hashlib
 import hmac
 import time
 import uuid
+from typing import Dict, List, Optional
 import requests
 
 EMPTY_BODY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -25,8 +27,8 @@ def _request(
     base_url: str,
     access_id: str,
     access_secret: str,
-    access_token: str | None = None,
-    query: dict | None = None,
+    access_token: Optional[str] = None,
+    query: Optional[Dict] = None,
 ) -> dict:
     t = str(int(time.time() * 1000))
     nonce = uuid.uuid4().hex
@@ -93,7 +95,7 @@ def get_device_status(
     access_secret: str,
     access_token: str,
     device_id: str,
-) -> list[dict]:
+) -> List[dict]:
     """GET /v1.0/iot-03/devices/{device_id}/status. Returns list of {code, value}."""
     path = f"/v1.0/iot-03/devices/{device_id}/status"
     data = _request(
