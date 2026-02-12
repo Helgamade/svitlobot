@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-WorkingDirectory=/path/to/svitlobot
-Environment=PATH=/path/to/svitlobot/venv/bin
-ExecStart=/path/to/svitlobot/venv/bin/python main.py
+User=idesig02
+WorkingDirectory=/home/idesig02/helgamade.com/svitlobot
+Environment=PATH=/home/idesig02/helgamade.com/svitlobot/venv/bin
+ExecStart=/home/idesig02/helgamade.com/svitlobot/venv/bin/python main.py
 Restart=always
 RestartSec=10
 

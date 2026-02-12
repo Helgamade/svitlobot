@@ -1,48 +1,61 @@
-# Деплой на сервер через Git
+# Деплой svitlobot (как kasa.helgamade.com — Git на сервер idesig02)
+
+## Схема
+
+- **origin** — GitHub (бэкап): `https://github.com/Helgamade/svitlobot.git`
+- **production** — сервер: `idesig02@idesig02.ftp.tools:deploy-svitlobot.git`
+- На сервере: bare-репо `~/deploy-svitlobot.git`, рабочая папка `/home/idesig02/helgamade.com/svitlobot`
 
 ## Локально (один раз)
 
-```bash
+```powershell
 cd e:\svitlobot.helgamade.com
-git init
-git add .
-git commit -m "Initial: Tuya status -> Telegram"
-git remote add origin <URL_РЕПОЗИТОРИЯ>   # GitHub, GitLab или свой сервер
-git push -u origin main
+
+# Remotes (как в kasa)
+git remote add origin https://github.com/Helgamade/svitlobot.git
+git remote add production idesig02@idesig02.ftp.tools:deploy-svitlobot.git
+
+# Репо на GitHub создай вручную: https://github.com/new → Helgamade/svitlobot
+git push -u origin master
 ```
 
-Если ветка по умолчанию у тебя `master`: `git push -u origin master`.
+## Один раз на сервере
 
-## На сервере (Linux)
-
-### 1. Клонировать и настроить
+По SSH на `idesig02@idesig02.ftp.tools`:
 
 ```bash
-git clone <URL_РЕПОЗИТОРИЯ> svitlobot
-cd svitlobot
+# 1. Bare-репозиторий для деплоя
+mkdir -p ~/deploy-svitlobot.git
+cd ~/deploy-svitlobot.git
+git init --bare
+
+# 2. Рабочая директория (первый раз — пустая, заполнится при первом push)
+mkdir -p /home/idesig02/helgamade.com/svitlobot
+```
+
+Локально загрузи hook и запушь код:
+
+```powershell
+.\deploy-setup.bat
+git push production master
+```
+
+После первого push на сервере в `~/helgamade.com/svitlobot` появится код. Дальше:
+
+```bash
+cd /home/idesig02/helgamade.com/svitlobot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-nano .env   # вписать TUYA_*, TELEGRAM_*, TUYA_DEVICE_ID и т.д.
+nano .env   # TUYA_*, TELEGRAM_*, TELEGRAM_CHANNEL_ID
 ```
 
-### 2. Запуск вручную (проверка)
-
-```bash
-source venv/bin/activate
-python main.py
-```
-
-### 3. Постоянный запуск (systemd)
-
-Создать юнит (подставь свой путь и пользователя):
+Создай systemd-юнит (путь и пользователь как в kasa):
 
 ```bash
 sudo nano /etc/systemd/system/svitlobot.service
 ```
-
-Содержимое:
 
 ```ini
 [Unit]
@@ -51,10 +64,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-WorkingDirectory=/home/www-data/svitlobot
-Environment=PATH=/home/www-data/svitlobot/venv/bin
-ExecStart=/home/www-data/svitlobot/venv/bin/python main.py
+User=idesig02
+WorkingDirectory=/home/idesig02/helgamade.com/svitlobot
+Environment=PATH=/home/idesig02/helgamade.com/svitlobot/venv/bin
+ExecStart=/home/idesig02/helgamade.com/svitlobot/venv/bin/python main.py
 Restart=always
 RestartSec=10
 
@@ -62,32 +75,52 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-Включить и запустить:
-
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable svitlobot
 sudo systemctl start svitlobot
-sudo systemctl status svitlobot
 ```
 
-Логи: `journalctl -u svitlobot -f`
+## Обычный деплой
 
-### Альтернатива: screen/tmux
+Как в kasa: коммит → push в origin → push в production.
+
+```powershell
+.\deploy-git.bat
+```
+
+Или вручную:
+
+```powershell
+git add .
+git commit -m "Описание"
+git push origin master
+git push production master
+```
+
+После `git push production master` hook на сервере обновит код в `/home/idesig02/helgamade.com/svitlobot` и перезапустит `systemctl restart svitlobot` (если юнит есть).
+
+## Проверка remotes
+
+```powershell
+git remote -v
+```
+
+Ожидается:
+
+```
+origin      https://github.com/Helgamade/svitlobot.git (fetch)
+origin      https://github.com/Helgamade/svitlobot.git (push)
+production  idesig02@idesig02.ftp.tools:deploy-svitlobot.git (fetch)
+production  idesig02@idesig02.ftp.tools:deploy-svitlobot.git (push)
+```
+
+## Если hook не срабатывает
+
+Исправь перевод строк (LF) и права:
 
 ```bash
-screen -S svitlobot
-source venv/bin/activate
-python main.py
-# Ctrl+A, D — отключиться; screen -r svitlobot — вернуться
+ssh idesig02@idesig02.ftp.tools "sed -i 's/\r$//' ~/deploy-svitlobot.git/hooks/post-receive && chmod +x ~/deploy-svitlobot.git/hooks/post-receive"
 ```
 
-## Обновление на сервере
-
-```bash
-cd svitlobot
-git pull
-source venv/bin/activate
-pip install -r requirements.txt
-sudo systemctl restart svitlobot   # если используешь systemd
-```
+Или снова запусти `.\deploy-setup.bat`.

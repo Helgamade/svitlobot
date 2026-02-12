@@ -1,0 +1,33 @@
+#!/bin/bash
+echo "===== Deploying svitlobot.helgamade.com ====="
+
+TARGET="/home/idesig02/helgamade.com/svitlobot"
+BARE_REPO="/home/idesig02/deploy-svitlobot.git"
+
+while read oldrev newrev ref
+do
+    if [[ $ref =~ .*/main$ ]] || [[ $ref =~ .*/master$ ]]; then
+        echo "Deploying branch to production..."
+
+        unset GIT_DIR
+
+        if [ ! -d "$TARGET" ]; then
+            echo "First deploy: cloning into $TARGET..."
+            mkdir -p "$(dirname "$TARGET")"
+            git clone "$BARE_REPO" "$TARGET"
+            cd "$TARGET" || exit 1
+        else
+            cd "$TARGET" || exit 1
+            git remote set-url origin "$BARE_REPO" 2>/dev/null || git remote add origin "$BARE_REPO" 2>/dev/null
+            git fetch origin master 2>&1 || git fetch origin 2>&1
+            git reset --hard origin/master 2>&1 || git reset --hard FETCH_HEAD 2>&1
+        fi
+
+        echo "Restarting svitlobot service (if exists)..."
+        sudo systemctl restart svitlobot 2>/dev/null || true
+
+        echo "===== Deployment complete! ====="
+    else
+        echo "Ref $ref received. Not deploying."
+    fi
+done
