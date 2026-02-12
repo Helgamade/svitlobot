@@ -190,6 +190,7 @@ def index():
             last = session.pop("last_sent", None)
             if last:
                 extra += '<div class="sent-preview"><strong>Надіслано:</strong>' + _escape_html(last) + '</div>'
+            extra += '<script>history.replaceState(null, "", "/");</script>'
         elif not _get_secret():
             extra = '<p class="msg err">WEB_SEND_SECRET не задано в .env — відправка вимкнена.</p>'
         return Response(_html_with_extra(extra), mimetype="text/html; charset=utf-8")
