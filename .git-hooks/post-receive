@@ -1,5 +1,6 @@
 #!/bin/bash
-echo "===== Deploying svitlobot.helgamade.com ====="
+# Один источник правды: репозиторий. Сервер = точная копия репо, без старых файлов.
+# Локально = один коммит -> push origin + push production -> здесь: рабочая копия = 100% из репо.
 
 TARGET="/home/idesig02/helgamade.com/svitlobot"
 BARE_REPO="/home/idesig02/deploy-svitlobot.git"
@@ -7,38 +8,51 @@ BARE_REPO="/home/idesig02/deploy-svitlobot.git"
 while read oldrev newrev ref
 do
     if [[ $ref =~ .*/main$ ]] || [[ $ref =~ .*/master$ ]]; then
-        echo "Deploying branch to production..."
+        echo "===== Deploy: one source = repo, server = exact copy ====="
 
         unset GIT_DIR
 
+        # Сохраняем только .env (единственное что не из репо)
+        ENV_BACKUP=""
+        if [ -f "$TARGET/.env" ]; then
+            ENV_BACKUP=$(mktemp)
+            cp -a "$TARGET/.env" "$ENV_BACKUP"
+            echo "Backed up .env"
+        fi
+
         if [ ! -d "$TARGET" ]; then
-            echo "First deploy: cloning into $TARGET..."
             mkdir -p "$(dirname "$TARGET")"
             git clone "$BARE_REPO" "$TARGET"
             cd "$TARGET" || exit 1
         else
             cd "$TARGET" || exit 1
             if [ ! -d ".git" ]; then
-                echo "Not a git repo, initializing..."
                 git init
                 git remote add origin "$BARE_REPO"
             fi
             git remote set-url origin "$BARE_REPO" 2>/dev/null || true
             git fetch origin master 2>&1 || git fetch origin 2>&1
             git checkout -B master origin/master 2>/dev/null || true
-            git reset --hard origin/master 2>&1 || git reset --hard FETCH_HEAD 2>&1
-            echo "Removing untracked files (keeping .env and logs)..."
-            git clean -fd -e .env -e .env.save -e "*.log" -e "__pycache__" 2>/dev/null || true
-            echo "Verify: main.py db.py message_format.py"
-            ls -la main.py db.py message_format.py config.py 2>/dev/null || true
+            git reset --hard origin/master 2>&1
+            # Удалить неотслеживаемые файлы (старые/лишние). Не трогать: .env, venv, логи
+            git clean -fd -e .env -e .env.save -e venv -e .venv -e "*.log" -e __pycache__ 2>/dev/null || true
         fi
 
-        echo "Restarting svitlobot..."
+        # Вернуть .env
+        if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
+            mv "$ENV_BACKUP" "$TARGET/.env"
+            echo "Restored .env"
+        fi
+
+        echo "Verify (only repo files):"
+        ls -la "$TARGET"/main.py "$TARGET"/db.py "$TARGET"/message_format.py "$TARGET"/config.py 2>/dev/null || true
+
+        echo "Restarting bot..."
         /usr/bin/pkill -f "python main.py" 2>/dev/null || true
         sleep 1
         "$TARGET/deploy/start-svitlobot-if-needed.sh" 2>/dev/null || true
 
-        echo "===== Deployment complete! ====="
+        echo "===== Deploy complete: server = repo ====="
     else
         echo "Ref $ref received. Not deploying."
     fi

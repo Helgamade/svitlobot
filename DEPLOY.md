@@ -1,5 +1,11 @@
 # Деплой svitlobot (как kasa.helgamade.com — Git на сервер idesig02)
 
+## Один источник правды (Git)
+
+- **Локально** — ты коммитишь в одну ветку (master).
+- **Один репозиторий** — тот же код в GitHub (origin) и на сервере (production = bare-репо).
+- **Сервер** — после каждого `git push production master` hook делает: `git fetch` + `git reset --hard` + `git clean -fd` (кроме .env, venv, логов). Рабочая папка на сервере = **точная копия репо**, старых/лишних файлов не остаётся.
+
 ## Схема
 
 - **origin** — GitHub (бэкап): `https://github.com/Helgamade/svitlobot.git`
