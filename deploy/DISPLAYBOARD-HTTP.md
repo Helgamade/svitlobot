@@ -17,14 +17,27 @@ cd /home/idesig02/helgamade.com/svitlobot
 
 Порт за замовчуванням: **8080**. Змінна середовища `DISPLAYBOARD_HTTP_PORT` — якщо потрібен інший порт. Відкрий порт 8080 на фаєрволі/панелі, якщо Arduino з іншої мережі звертається до сервера по IP.
 
-У `.env` мають бути `TUYA_DEVICE_ID` та MySQL (MYSQL_*), щоб поверталось актуальне значення; інакше завжди `{"value":0}`.
+У `.env` мають бути `TUYA_DEVICE_ID` та MySQL (MYSQL_*), щоб поверталось актуальне значення; інакше завжди `{"value":0, "reviews":0}`.
+
+**Відповідь API:** `{"value": 0|1, "reviews": N}` — `value` = світло (0 нема, 1 є), `reviews` = кількість відгуків з helgamade.com.ua. На екрані: **зверху** — велике число (reviews), **знизу** — кольорова смуга (value: зелений = світло є, червоний = нема).
 
 Якщо сервер за фаєрволом, відкрий порт 8080 для локальної мережі або запускай displayboard_http на Raspberry Pi / ПК у тій же мережі, що й Arduino.
 
-## 2. Arduino: HTTP замість HTTPS
+## 2. Парсер відгуків (reviews)
+
+Скрипт `reviews_parser.py` завантажує helgamade.com.ua/ua/, витягує кількість відгуків (як parser_otzyv_helgamade.php), зберігає в нашу БД (`displayboard_reviews`). Запускай по крону, як інші команди — через `/bin/sh` і скрипт:
+
+```bash
+*/30 * * * * /bin/sh /home/idesig02/helgamade.com/svitlobot/deploy/run-reviews-parser.sh
+```
+
+Опційно в `.env`: `REVIEWS_PARSER_URL=https://helgamade.com.ua/ua/` (за замовчуванням так і є).
+
+## 3. Arduino: HTTP замість HTTPS
 
 - Використовуй **WiFiClient** (не WiFiSSLClient).
-- Порт **80** для звичайного сайту не підійде (редирект на HTTPS). Порт **8080** — для displayboard_http.
+- Порт **8080** — для displayboard_http.
+- Парси відповідь: `{"value": 0|1, "reviews": N}`. **Зверху екрана** — число `reviews` (сегментні цифри або текст). **Знизу** — кольорова смуга: зелений = value 1 (світло є), червоний = value 0 (нема).
 
 Приклад змін:
 
@@ -38,12 +51,13 @@ const char* path   = "/api/displayboard/current";
 
 WiFiClient client;  // не WiFiSSLClient
 
-// Далі той самий GET: client.connect(server, port), client.print("GET " path " HTTP/1.1\r\nHost: " server "\r\nConnection: close\r\n\r\n"); ...
+// Парсинг: знайти в тілі "{\"value\":" та "\"reviews\":"; value — 0/1 для смуги знизу, reviews — число зверху.
+// Малювання: drawCenteredNumber(reviews); внизу екрана — fillRect(0, height-20, width, 20, value ? GREEN : RED);
 ```
 
 Якщо displayboard_http крутиться на тому ж хості, що й svitlobot.helgamade.com, а порт 8080 відкритий — можна вказати IP хоста та port 8080.
 
-## 3. Перевірка нульового IP (компіляція)
+## 4. Перевірка нульового IP (компіляція)
 
 Щоб уникнути помилки порівняння `WiFi.localIP() == (uint32_t)0`, перевіряй нульовий IP по байтах:
 

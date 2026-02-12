@@ -23,6 +23,7 @@ except Exception:
     _TZ_KYIV = None  # type: ignore
 
 _TABLE = "status_events"
+_TABLE_REVIEWS = "displayboard_reviews"
 
 
 def _utc_to_kyiv(dt):
@@ -69,6 +70,16 @@ def ensure_table(cursor) -> None:
             INDEX (device_id, changed_at)
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS displayboard_reviews (
+            id TINYINT PRIMARY KEY DEFAULT 1,
+            reviews_count INT NOT NULL DEFAULT 0,
+            updated_at DATETIME NOT NULL
+        )
+    """)
+    cursor.execute(
+        "INSERT IGNORE INTO displayboard_reviews (id, reviews_count, updated_at) VALUES (1, 0, NOW())"
+    )
 
 
 def get_last(device_id: str) -> Optional[Tuple[datetime, bool]]:
@@ -134,6 +145,52 @@ def record_if_changed(device_id: str, is_online: bool, now: Optional[datetime] =
             conn.close()
     except Exception:
         return (False, None, None)
+
+
+def get_reviews_count() -> int:
+    """Last saved reviews count for displayboard (helgamade.com.ua). 0 if no DB or no row."""
+    if not pymysql or not mysql_available():
+        return 0
+    try:
+        conn = _conn()
+        try:
+            with conn.cursor() as cur:
+                ensure_table(cur)
+                cur.execute(
+                    "SELECT reviews_count FROM displayboard_reviews WHERE id = 1"
+                )
+                row = cur.fetchone()
+                return int(row["reviews_count"]) if row else 0
+        finally:
+            conn.close()
+    except Exception:
+        return 0
+
+
+def set_reviews_count(count: int) -> None:
+    """Save reviews count for displayboard. Uses Europe/Kyiv for updated_at."""
+    if not pymysql or not mysql_available():
+        return
+    now_local = _utc_to_kyiv(datetime.utcnow())
+    try:
+        conn = _conn()
+        try:
+            with conn.cursor() as cur:
+                ensure_table(cur)
+                cur.execute(
+                    "UPDATE displayboard_reviews SET reviews_count = %s, updated_at = %s WHERE id = 1",
+                    (max(0, count), now_local),
+                )
+                if cur.rowcount == 0:
+                    cur.execute(
+                        "INSERT INTO displayboard_reviews (id, reviews_count, updated_at) VALUES (1, %s, %s)",
+                        (max(0, count), now_local),
+                    )
+                conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
 
 
 def mysql_available() -> bool:

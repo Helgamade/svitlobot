@@ -32,6 +32,7 @@ class DisplayboardHandler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         value = 0
+        reviews = 0
         device_id = os.environ.get("TUYA_DEVICE_ID", "").strip()
         if device_id and db.mysql_available():
             try:
@@ -39,9 +40,10 @@ class DisplayboardHandler(BaseHTTPRequestHandler):
                 if last is not None:
                     _, is_online = last
                     value = 1 if is_online else 0
+                reviews = db.get_reviews_count()
             except Exception:
                 pass
-        body = json.dumps({"value": value}).encode("utf-8")
+        body = json.dumps({"value": value, "reviews": reviews}).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))

@@ -184,17 +184,19 @@ def _get_secret():
 
 @app.route("/api/displayboard/current", methods=["GET"])
 def api_displayboard_current():
-    """JSON for Arduino display: {"value": 1} = світло є, {"value": 0} = світло нема. One indexed SELECT, fast."""
+    """JSON for Arduino: value=0|1 (світло), reviews=N (кількість відгуків). Верх — число, низ — кольорова смуга."""
     value = 0
+    reviews = 0
     if db.mysql_available():
         try:
             last = db.get_last(config.tuya_device_id())
             if last is not None:
                 _, is_online = last
                 value = 1 if is_online else 0
+            reviews = db.get_reviews_count()
         except Exception:
             pass
-    return jsonify(value=value)
+    return jsonify(value=value, reviews=reviews)
 
 
 @app.route("/", methods=["GET", "POST"])
