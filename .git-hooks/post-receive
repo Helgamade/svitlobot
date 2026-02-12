@@ -18,9 +18,19 @@ do
             cd "$TARGET" || exit 1
         else
             cd "$TARGET" || exit 1
-            git remote set-url origin "$BARE_REPO" 2>/dev/null || git remote add origin "$BARE_REPO" 2>/dev/null
+            if [ ! -d ".git" ]; then
+                echo "Not a git repo, initializing..."
+                git init
+                git remote add origin "$BARE_REPO"
+            fi
+            git remote set-url origin "$BARE_REPO" 2>/dev/null || true
             git fetch origin master 2>&1 || git fetch origin 2>&1
+            git checkout -B master origin/master 2>/dev/null || true
             git reset --hard origin/master 2>&1 || git reset --hard FETCH_HEAD 2>&1
+            echo "Removing untracked files (keeping .env and logs)..."
+            git clean -fd -e .env -e .env.save -e "*.log" -e "__pycache__" 2>/dev/null || true
+            echo "Verify: main.py db.py message_format.py"
+            ls -la main.py db.py message_format.py config.py 2>/dev/null || true
         fi
 
         echo "Restarting svitlobot..."
