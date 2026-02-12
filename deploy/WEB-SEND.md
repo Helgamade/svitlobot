@@ -20,19 +20,19 @@
    **Вариант A: gunicorn за локальным портом, веб-сервер проксирует на него**
    ```bash
    ./venv/bin/pip install gunicorn
-   ./venv/bin/gunicorn -w 1 -b 127.0.0.1:5000 web_send:app
+   ./venv/bin/gunicorn -w 1 -b 127.0.0.1:3000 web_send:app
    ```
-   В настройках виртуального хоста `svitlobot.helgamade.com` настроить проксирование `/` на `http://127.0.0.1:5000` (nginx: `proxy_pass`; Apache: `ProxyPass`).
+   В настройках виртуального хоста `svitlobot.helgamade.com` настроить проксирование `/` на `http://127.0.0.1:3000` (на хостинге в панели «Проксирование» указать порт 3000).
 
    **Вариант B: встроенный сервер Flask (только для проверки)**
    ```bash
    ./venv/bin/python web_send.py
    ```
-   По умолчанию слушает порт 5000. Для продакшена лучше gunicorn + прокси.
+   По умолчанию в скрипте — порт 3000 (совпадает с прокси в панели хостинга).
 
 4. Чтобы процесс не падал после выхода из SSH: запускать через nohup, systemd или скрипт в cron (аналогично боту). Пример nohup:
    ```bash
-   nohup ./venv/bin/gunicorn -w 1 -b 127.0.0.1:5000 web_send:app >> web_send.log 2>&1 &
+   nohup ./venv/bin/gunicorn -w 1 -b 127.0.0.1:3000 web_send:app >> web_send.log 2>&1 &
    ```
 
 ## Доступ

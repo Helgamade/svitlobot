@@ -3,7 +3,7 @@
 DIR="/home/idesig02/helgamade.com/svitlobot"
 VENV="$DIR/venv"
 LOG="$DIR/web_send.log"
-PORT=5000
+PORT=3000
 
 if [ ! -f "$DIR/web_send.py" ]; then
   exit 0
