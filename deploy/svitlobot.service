@@ -1,0 +1,15 @@
+[Unit]
+Description=Tuya status -> Telegram
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/svitlobot
+Environment=PATH=/path/to/svitlobot/venv/bin
+ExecStart=/path/to/svitlobot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
