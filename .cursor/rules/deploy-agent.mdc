@@ -1,0 +1,29 @@
+---
+description: Агент сам выполняет весь деплой на 100%
+alwaysApply: true
+---
+
+# Деплой svitlobot — делает агент
+
+Агент выполняет деплой полностью. Пользователю ничего запускать не нужно.
+
+## Что делает агент при деплое
+
+1. При изменении хука: выполнить `.\deploy-setup.bat` (залить post-receive на сервер).
+2. Закоммитить изменения: `git add .` и `git commit -m "..."`.
+3. Пуш в GitHub: `git push origin master`.
+4. Пуш на production: `git push production master` (на сервере сработает hook и обновится код в `/home/idesig02/helgamade.com/svitlobot`, перезапустится сервис svitlobot при наличии).
+
+Делать это по запросу пользователя («задеплой», «выкати», «push») или после изменений, которые должны попасть на сервер. Не просить пользователя самому запускать bat-файлы или git push.
+
+## Что нужно один раз (не агент)
+
+- **SSH** с этой машины на `idesig02@idesig02.ftp.tools` уже настроен (ключи) — иначе бы push production не работал.
+- **Один раз на сервере**: venv, `pip install -r requirements.txt`, создать `.env` с секретами (TUYA_*, TELEGRAM_*), установить и запустить systemd-юнит `svitlobot.service`. Это делается вручную или один раз по инструкции в DEPLOY.md; после этого все последующие деплои — только через агента (git push, hook на сервере).
+
+## Remotes
+
+- `origin` = https://github.com/Helgamade/svitlobot.git
+- `production` = idesig02@idesig02.ftp.tools:deploy-svitlobot.git
+
+Ветка для деплоя: `master`.
