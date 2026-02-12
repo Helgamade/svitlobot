@@ -61,6 +61,11 @@ do
         sleep 1
         "$TARGET/deploy/start-web-send-if-needed.sh" 2>/dev/null || true
 
+        echo "Restarting displayboard_http (HTTP 8080 for Arduino clones)..."
+        /usr/bin/pkill -f "displayboard_http.py" 2>/dev/null || true
+        sleep 1
+        "$TARGET/deploy/start-displayboard-http-if-needed.sh" 2>/dev/null || true
+
         echo "===== Deploy complete: server = repo ====="
     else
         echo "Ref $ref received. Not deploying."
