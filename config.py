@@ -2,11 +2,14 @@
 import os
 from pathlib import Path
 
-# Load .env if present (optional)
+# Load .env if present (optional; skip if dotenv not installed)
 _env = Path(__file__).resolve().parent / ".env"
 if _env.exists():
-    from dotenv import load_dotenv
-    load_dotenv(_env)
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env)
+    except ImportError:
+        pass
 
 
 def _get(key: str) -> str:
@@ -62,3 +65,8 @@ def mysql_password() -> str:
 
 def mysql_database() -> str:
     return os.environ.get("MYSQL_DATABASE", "").strip()
+
+
+def mysql_unix_socket() -> str:
+    """Optional: path to MySQL socket (if set, host/port are ignored)."""
+    return os.environ.get("MYSQL_UNIX_SOCKET", "").strip()

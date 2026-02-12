@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Test: write to status_events, read back. Run from project root:
-  python deploy/test_db_write_read.py
+Test: write to status_events, read back. Run from project root with VENV python:
+  ./venv/bin/python deploy/test_db_write_read.py
+  or:  ./deploy/run_test_db.sh
+(If you use plain 'python' and get ImportError, your shell may alias python to system one.)
 """
 from __future__ import print_function
 import os
