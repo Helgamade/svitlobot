@@ -5,13 +5,15 @@ Form: type message + secret, submit → send to Telegram channel.
 """
 from __future__ import absolute_import
 import os
-from flask import Flask, request, Response, redirect, url_for
+from flask import Flask, request, Response, redirect, url_for, session
 
 import config
 from telegram_sender import send_to_channel
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024  # 8 KB max body
+_app_secret = os.environ.get("FLASK_SECRET_KEY") or config.web_send_secret()
+app.secret_key = _app_secret if _app_secret else "svitlobot-web-send-fallback"
 
 HTML_FORM = """<!DOCTYPE html>
 <html lang="uk">
@@ -48,11 +50,11 @@ HTML_FORM = """<!DOCTYPE html>
       margin: 0;
       min-height: 100vh;
       min-height: 100dvh;
-      padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
     }
     .wrap {
       width: 100%;
@@ -79,7 +81,7 @@ HTML_FORM = """<!DOCTYPE html>
       margin-top: 1rem;
     }
     label:first-of-type { margin-top: 0; }
-    input[type="password"],
+    input[type="text"],
     textarea {
       width: 100%;
       padding: 0.85rem 1rem;
@@ -130,6 +132,19 @@ HTML_FORM = """<!DOCTYPE html>
     }
     .msg.ok { background: var(--ok-bg); border-color: var(--ok-border); color: #81c995; }
     .msg.err { background: var(--err-bg); border-color: var(--err-border); color: #f28b82; }
+    .sent-preview {
+      margin-top: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-muted);
+    }
+    .sent-preview strong { color: var(--text); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.35rem; display: block; }
   </style>
 </head>
 <body>
@@ -140,7 +155,7 @@ HTML_FORM = """<!DOCTYPE html>
         <label for="text">Повідомлення</label>
         <textarea id="text" name="text" required placeholder="Введіть текст..." autocomplete="off"></textarea>
         <label for="secret">Секрет</label>
-        <input type="password" id="secret" name="secret" required placeholder="Пароль для відправки" autocomplete="current-password">
+        <input type="text" id="secret" name="secret" required placeholder="Пароль для відправки" autocomplete="off">
         <button type="submit">Надіслати в Telegram</button>
       </form>
       <!--EXTRA-->
@@ -153,6 +168,10 @@ HTML_FORM = """<!DOCTYPE html>
 
 def _html_with_extra(extra):
     return HTML_FORM.replace("<!--EXTRA-->", extra)
+
+
+def _escape_html(s):
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _get_secret():
@@ -168,6 +187,9 @@ def index():
         extra = ""
         if request.args.get("sent") == "1":
             extra = '<p class="msg ok">Надіслано в канал.</p>'
+            last = session.pop("last_sent", None)
+            if last:
+                extra += '<div class="sent-preview"><strong>Надіслано:</strong>' + _escape_html(last) + '</div>'
         elif not _get_secret():
             extra = '<p class="msg err">WEB_SEND_SECRET не задано в .env — відправка вимкнена.</p>'
         return Response(_html_with_extra(extra), mimetype="text/html; charset=utf-8")
@@ -187,6 +209,7 @@ def index():
 
     try:
         send_to_channel(config.telegram_bot_token(), config.telegram_channel_id(), text)
+        session["last_sent"] = text
         return redirect(url_for("index", sent=1), code=302)
     except Exception as e:
         err_escaped = str(e).replace("<", "&lt;")
