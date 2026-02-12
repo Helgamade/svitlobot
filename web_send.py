@@ -5,7 +5,7 @@ Form: type message + secret, submit → send to Telegram channel.
 """
 from __future__ import absolute_import
 import os
-from flask import Flask, request, Response
+from flask import Flask, request, Response, redirect, url_for
 
 import config
 from telegram_sender import send_to_channel
@@ -61,7 +61,9 @@ def _get_secret():
 def index():
     if request.method == "GET":
         extra = ""
-        if not _get_secret():
+        if request.args.get("sent") == "1":
+            extra = '<p class="msg ok">Надіслано в канал.</p>'
+        elif not _get_secret():
             extra = '<p class="msg err">WEB_SEND_SECRET не задано в .env — відправка вимкнена.</p>'
         return Response(_html_with_extra(extra), mimetype="text/html; charset=utf-8")
 
@@ -80,7 +82,7 @@ def index():
 
     try:
         send_to_channel(config.telegram_bot_token(), config.telegram_channel_id(), text)
-        return Response(_html_with_extra('<p class="msg ok">Надіслано в канал.</p>'), mimetype="text/html; charset=utf-8")
+        return redirect(url_for("index", sent=1), code=302)
     except Exception as e:
         err_escaped = str(e).replace("<", "&lt;")
         return Response(_html_with_extra('<p class="msg err">Помилка: {}</p>'.format(err_escaped)), 502, mimetype="text/html; charset=utf-8")
