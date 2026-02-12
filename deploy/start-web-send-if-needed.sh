@@ -14,8 +14,8 @@ fi
 if [ ! -x "$VENV/bin/python" ]; then
   exit 0
 fi
-if [ ! -x "$VENV/bin/gunicorn" ]; then
-  "$VENV/bin/pip" install -q gunicorn 2>/dev/null || exit 0
-fi
 cd "$DIR" || exit 1
+if [ ! -x "$VENV/bin/gunicorn" ]; then
+  "$VENV/bin/pip" install -q -r requirements.txt 2>/dev/null || exit 0
+fi
 nohup "$VENV/bin/gunicorn" -w 1 -b 127.0.0.1:$PORT web_send:app >> "$LOG" 2>&1 &
