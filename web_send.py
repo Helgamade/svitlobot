@@ -5,9 +5,10 @@ Form: type message + secret, submit → send to Telegram channel.
 """
 from __future__ import absolute_import
 import os
-from flask import Flask, request, Response, redirect, url_for, session
+from flask import Flask, request, Response, redirect, url_for, session, jsonify
 
 import config
+import db
 from telegram_sender import send_to_channel
 
 app = Flask(__name__)
@@ -179,6 +180,21 @@ def _get_secret():
     if not s:
         return None
     return s
+
+
+@app.route("/api/displayboard/current", methods=["GET"])
+def api_displayboard_current():
+    """JSON for Arduino display: {"value": 1} = світло є, {"value": 0} = світло нема. One indexed SELECT, fast."""
+    value = 0
+    if db.mysql_available():
+        try:
+            last = db.get_last(config.tuya_device_id())
+            if last is not None:
+                _, is_online = last
+                value = 1 if is_online else 0
+        except Exception:
+            pass
+    return jsonify(value=value)
 
 
 @app.route("/", methods=["GET", "POST"])
