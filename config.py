@@ -42,3 +42,23 @@ def telegram_channel_id() -> str:
 
 def poll_interval() -> int:
     return int(os.environ.get("POLL_INTERVAL", "300"))
+
+
+def mysql_host() -> str:
+    return os.environ.get("MYSQL_HOST", "localhost").strip()
+
+
+def mysql_port() -> int:
+    return int(os.environ.get("MYSQL_PORT", "3306"))
+
+
+def mysql_user() -> str:
+    return os.environ.get("MYSQL_USER", "").strip()
+
+
+def mysql_password() -> str:
+    return os.environ.get("MYSQL_PASSWORD", "").strip()
+
+
+def mysql_database() -> str:
+    return os.environ.get("MYSQL_DATABASE", "").strip()

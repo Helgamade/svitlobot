@@ -89,6 +89,28 @@ def get_token(base_url: str, access_id: str, access_secret: str) -> str:
     return token
 
 
+def get_device_info(
+    base_url: str,
+    access_id: str,
+    access_secret: str,
+    access_token: str,
+    device_id: str,
+) -> dict:
+    """GET /v2.0/cloud/thing/{device_id}. Returns device details including is_online (bool)."""
+    path = f"/v2.0/cloud/thing/{device_id}"
+    data = _request(
+        "GET",
+        path,
+        base_url,
+        access_id,
+        access_secret,
+        access_token=access_token,
+    )
+    if not data.get("success"):
+        raise RuntimeError(f"Tuya device info error: {data}")
+    return data.get("result", {})
+
+
 def get_device_status(
     base_url: str,
     access_id: str,
