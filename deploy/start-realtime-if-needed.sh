@@ -6,7 +6,7 @@ LOG="$DIR/svitlobot-mq.log"
 if [ ! -x "$PYTHON" ]; then
   exit 0
 fi
-if /usr/bin/pgrep -f "python realtime_consumer.py" > /dev/null 2>&1; then
+if /usr/bin/pgrep -f "realtime_consumer.py" > /dev/null 2>&1; then
   exit 0
 fi
 cd "$DIR" || exit 1

@@ -53,6 +53,8 @@ do
         "$TARGET/deploy/start-svitlobot-if-needed.sh" 2>/dev/null || true
         if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet svitlobot-mq 2>/dev/null; then
             systemctl restart svitlobot-mq 2>/dev/null && echo "Restarted svitlobot-mq" || true
+        else
+            "$TARGET/deploy/start-realtime-if-needed.sh" 2>/dev/null || true
         fi
 
         echo "===== Deploy complete: server = repo ====="
